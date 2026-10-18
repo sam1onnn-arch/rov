@@ -55,7 +55,7 @@ a.btn:hover{border-color:#fff}
 /* 1. главный экран */
 .hero{position:relative;height:100svh;min-height:640px;overflow:hidden;display:flex;align-items:flex-end}
 .hero>img,.hero>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(9,9,10,.94) 0%,rgba(9,9,10,.7) 35%,rgba(9,9,10,.3) 65%,rgba(9,9,10,.45) 100%)}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(9,9,10,.7) 0%,rgba(9,9,10,0) 22%),linear-gradient(0deg,rgba(9,9,10,.94) 0%,rgba(9,9,10,.7) 35%,rgba(9,9,10,.3) 65%,rgba(9,9,10,.45) 100%)}
 @media (max-width:900px){.hero::after{background:linear-gradient(0deg,rgba(9,9,10,.94) 0%,rgba(9,9,10,.55) 55%,rgba(9,9,10,.6) 100%)}}
 .hero .wrap{position:relative;z-index:2;padding-bottom:56px;display:grid;gap:30px}
 .hero h1{font-size:clamp(42px,6vw,88px);line-height:1.04;font-weight:200;letter-spacing:-.025em;max-width:9em}
@@ -304,7 +304,7 @@ details .wf-lines{padding:0 0 24px;max-width:60ch}
 <div id="home">
 <!-- 1. ГЛАВНЫЙ ЭКРАН -->
 <section class="hero" id="top" style="padding:0">
-  <video id="heroVideo" muted loop playsinline preload="auto" poster="assets/hero-poster.jpg" aria-hidden="true" data-src="assets/hero.mp4" data-src-m="assets/hero-m.mp4"></video>
+  <video id="heroVideo" muted loop playsinline preload="auto" poster="assets/hero-poster.jpg?v=2" aria-hidden="true" data-src="assets/hero.mp4?v=2" data-src-m="assets/hero-m.mp4?v=2"></video>
   <div class="wrap">
     <h1>Аренда премиальных авто в Грузии</h1>
     <p>Страховка Full coverage включена. Залог и условия видны до заявки. Доставка в аэропорт и отель.</p>
