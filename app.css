@@ -167,3 +167,6 @@ textarea:focus{outline:0;border-color:#fff}
 
 .stat b{display:block;font-weight:300;font-size:26px;margin-top:8px}
 .phone input{flex:1;min-width:0}
+
+.ok-msg.bad{border-color:#e59a8f}
+.ok-msg.bad svg{stroke:#e59a8f}

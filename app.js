@@ -19,6 +19,17 @@ function closeModal() { $('#modal').hidden = true; $('#mbody').innerHTML = ''; d
 $('#modal').addEventListener('click', function (e) { if (e.target.id === 'modal' || e.target.classList.contains('mx')) closeModal(); });
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { if (!$('#modal').hidden) closeModal(); closePhoneLists(); } });
 
+/* ---------- связь с сервером (если указан apiBase в config.js) ---------- */
+function apiBase() { return (window.APP_CONFIG && window.APP_CONFIG.apiBase) || ''; }
+function api(path, body, method) {
+  return fetch(apiBase() + path, {
+    method: method || 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined
+  }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { j.status = r.status; return j; }); });
+}
+var LOGIN_ERR = '';
+var LOGIN_UNVERIFIED = '';
+
 /* ---------- флаги и телефонные коды ---------- */
 var FL = {
   RU: '<rect width="24" height="16" fill="#fff"/><rect y="5.33" width="24" height="5.34" fill="#0039a6"/><rect y="10.67" width="24" height="5.33" fill="#d52b1e"/>',
@@ -32,6 +43,7 @@ var FL = {
   UZ: '<rect width="24" height="5.3" fill="#0099b5"/><rect y="5.3" width="24" height="5.4" fill="#fff"/><rect y="10.7" width="24" height="5.3" fill="#1eb53a"/><rect y="5" width="24" height=".5" fill="#ce1126"/><rect y="10.5" width="24" height=".5" fill="#ce1126"/>',
   TR: '<rect width="24" height="16" fill="#e30a17"/><circle cx="9" cy="8" r="4" fill="#fff"/><circle cx="10.2" cy="8" r="3.2" fill="#e30a17"/><circle cx="14" cy="8" r="1" fill="#fff"/>',
   AE: '<rect width="24" height="16" fill="#00732f"/><rect y="5.33" width="24" height="5.34" fill="#fff"/><rect y="10.67" width="24" height="5.33" fill="#000"/><rect width="6" height="16" fill="#f00"/>',
+  XX: '<rect width="24" height="16" fill="#2b2b2f"/><circle cx="12" cy="8" r="5.5" fill="none" stroke="#ebe7df" stroke-width="1"/><path d="M6.5 8h11M12 2.5c-2.5 2.5-2.5 8.5 0 11M12 2.5c2.5 2.5 2.5 8.5 0 11" stroke="#ebe7df" stroke-width=".8" fill="none"/>',
   DE: '<rect width="24" height="5.33" fill="#000"/><rect y="5.33" width="24" height="5.34" fill="#dd0000"/><rect y="10.67" width="24" height="5.33" fill="#ffce00"/>'
 };
 var COUNTRIES = [
@@ -46,7 +58,8 @@ var COUNTRIES = [
   { c: 'UZ', n: 'Узбекистан', d: '+998', ph: '90 000 00 00' },
   { c: 'TR', n: 'Турция', d: '+90', ph: '501 000 00 00' },
   { c: 'AE', n: 'ОАЭ', d: '+971', ph: '50 000 0000' },
-  { c: 'DE', n: 'Германия', d: '+49', ph: '1512 0000000' }
+  { c: 'DE', n: 'Германия', d: '+49', ph: '1512 0000000' },
+  { c: 'XX', n: 'Другая страна (ввести номер с кодом)', d: '+…', ph: '+33 1 23 45 67 89' }
 ];
 function cdata(c) { return COUNTRIES.filter(function (x) { return x.c === c; })[0] || COUNTRIES[0]; }
 function flag(c) { return '<svg class="fl" viewBox="0 0 24 16" aria-hidden="true">' + (FL[c] || '') + '</svg>'; }
@@ -81,10 +94,24 @@ document.addEventListener('click', function (e) {
   }
   if (!e.target.closest('.phone')) closePhoneLists();
 });
+document.addEventListener('input', function (e) {
+  var inp = e.target, ph = inp.closest && inp.closest('.phone');
+  if (!ph) return;
+  var v = inp.value.replace(/\s/g, '');
+  if (v.charAt(0) !== '+' || v.length < 3) return;
+  var best = null;
+  COUNTRIES.forEach(function (c) { if (c.c !== 'XX' && v.indexOf(c.d) === 0 && (!best || c.d.length > best.d.length)) best = c; });
+  var cd = best || cdata('XX');
+  if (ph.dataset.c === cd.c) return;
+  ph.dataset.c = cd.c;
+  $('.pc', ph).innerHTML = flag(cd.c) + '<span class="dc">' + cd.d + '</span>' + CV;
+  $$('li', ph).forEach(function (x) { x.setAttribute('aria-selected', String(x.dataset.c === cd.c)); });
+});
 function phoneValue(id, root) {
   var ph = $('[data-phone="' + id + '"]', root || document);
-  var cd = cdata(ph.dataset.c), digits = $('input', ph).value.replace(/\D/g, '');
-  return { code: cd.d, digits: digits, full: cd.d + ' ' + $('input', ph).value.trim() };
+  var cd = cdata(ph.dataset.c), raw = $('input', ph).value.trim(), digits = raw.replace(/\D/g, '');
+  var intl = raw.charAt(0) === '+' || cd.c === 'XX';
+  return { code: cd.d, digits: digits, full: intl ? raw : cd.d + ' ' + raw };
 }
 
 /* ---------- данные ---------- */
@@ -138,7 +165,7 @@ function renderRegister() {
     '<label class="wide">Телефон' + phoneField('reg', REG.co, REG.ph) + '</label>' +
     '<label>Дата рождения<input name="dob" type="date" value="' + esc(REG.dob) + '"></label>' +
     '<div></div>' +
-    '<label>Пароль<input name="pw" type="password" autocomplete="new-password" placeholder="Минимум 6 символов"></label>' +
+    '<label>Пароль<input name="pw" type="password" autocomplete="new-password" placeholder="Минимум 8 символов"></label>' +
     '<label>Повторите пароль<input name="pw2" type="password" autocomplete="new-password" placeholder="Ещё раз"></label>' +
     '<label class="chk"><input type="checkbox" name="agree" style="width:18px;height:18px;flex:none;margin-top:2px"><span>Согласен с условиями аренды и обработкой персональных данных</span></label>' +
     '<p class="err wide" id="regErr" role="alert"></p>' +
@@ -151,7 +178,7 @@ function renderSent(v) {
     '<p>Мы отправили письмо со ссылкой для подтверждения регистрации на <b>' + esc(REG.email) + '</b>. Перейдите по ссылке из письма, чтобы войти в личный кабинет.</p>' +
     '<div class="spam">' + WARN + '<div><b>Письма нет? Проверьте папку «Спам»</b><span>Иногда письмо попадает в «Спам» или «Нежелательную почту», а иногда приходит с небольшой задержкой. Если нашли его там, отметьте «Не спам».</span></div></div>' +
     '<div class="mact"><button class="btn" type="button" id="resend" disabled>Отправить письмо ещё раз</button><button class="btn" type="button" id="editMail">Изменить email</button></div>' +
-    '<p class="hint" style="margin-top:22px">Это макет: нажмите <span class="lnk" id="openMail">«Открыть письмо (пример)»</span>, чтобы увидеть, как оно выглядит.</p></div></div>';
+    (apiBase() ? '' : '<p class="hint" style="margin-top:22px">Это макет: нажмите <span class="lnk" id="openMail">«Открыть письмо (пример)»</span>, чтобы увидеть, как оно выглядит.</p>') + '</div></div>';
   startCountdown();
 }
 function startCountdown() {
@@ -175,14 +202,14 @@ function renderLogin() {
   var v = $('#loginView');
   v.innerHTML = '<div class="wrap pg">' + BACK + '<h1>Вход</h1><p class="sub">Войдите, чтобы увидеть свои бронирования.</p>' +
     '<div class="auth"><div><div class="tabs2"><a href="#/login" class="tb on">Вход</a><a href="#/register" class="tb">Регистрация</a></div>' +
-    (LOGIN_MSG ? '<div class="ok-msg">' + OKI + '<span>' + esc(LOGIN_MSG) + '</span></div>' : '') +
+    (LOGIN_MSG ? '<div class="ok-msg">' + OKI + '<span>' + esc(LOGIN_MSG) + '</span></div>' : '') + (LOGIN_ERR ? '<div class="ok-msg bad">' + WARN + '<span>' + esc(LOGIN_ERR) + '</span></div>' : '') +
     '<form class="fields" id="loginForm" novalidate>' +
-    '<label class="wide">Email или телефон<input name="login" value="admin" autocomplete="username"></label>' +
-    '<label class="wide">Пароль<input name="pw" type="password" value="admin" autocomplete="current-password"></label>' +
+    '<label class="wide">Email или телефон<input name="login" value="' + (apiBase() ? '' : 'admin') + '" autocomplete="username"></label>' +
+    '<label class="wide">Пароль<input name="pw" type="password" value="' + (apiBase() ? '' : 'admin') + '" autocomplete="current-password"></label>' +
     '<p class="err wide" id="loginErr" role="alert"></p>' +
     '<div class="wide"><button class="btn solid full" type="submit">Войти</button></div>' +
     '<p class="wide hint">Нет аккаунта? <a href="#/register" class="lnk">Зарегистрироваться</a> · <a href="#/cabinet" class="lnk">Войти как клиент</a></p></form></div>' + SIDE + '</div></div>';
-  LOGIN_MSG = '';
+  LOGIN_MSG = ''; LOGIN_ERR = '';
 }
 
 /* ============================================================
@@ -349,11 +376,15 @@ function reviewForm(id) {
 
 /* ---------- события ---------- */
 document.addEventListener('click', function (e) {
-  var t = e.target.closest('[data-act],[data-atab],[data-ctab],[data-star],#resend,#editMail,#openMail,#confirmMail');
+  var t = e.target.closest('[data-act],[data-atab],[data-ctab],[data-star],#resend,#resendLogin,#editMail,#openMail,#confirmMail');
   if (!t) return;
   if (t.id === 'openMail') { mailPreview(); return; }
   if (t.id === 'editMail') { REG.state = 'form'; clearInterval(cdTimer); renderRegister(); return; }
-  if (t.id === 'resend') { toast('Письмо отправлено ещё раз. Проверьте и папку «Спам»'); startCountdown(); return; }
+  if (t.id === 'resend') {
+    if (apiBase()) { api('/api/auth/resend', { email: REG.email }).then(function (j) { toast(j.ok ? 'Письмо отправлено ещё раз. Проверьте и папку «Спам»' : 'Не удалось отправить письмо'); }); startCountdown(); return; }
+    toast('Письмо отправлено ещё раз. Проверьте и папку «Спам»'); startCountdown(); return;
+  }
+  if (t.id === 'resendLogin') { api('/api/auth/resend', { email: LOGIN_UNVERIFIED }).then(function (j) { toast(j.ok ? 'Письмо отправлено. Проверьте и папку «Спам»' : 'Не удалось отправить письмо'); }); return; }
   if (t.id === 'confirmMail') { closeModal(); REG.state = 'form'; clearInterval(cdTimer); LOGIN_MSG = 'Email подтверждён. Теперь можно войти в личный кабинет.'; location.hash = '#/login'; return; }
   if (t.dataset.atab) { A.tab = t.dataset.atab; renderAdmin(); return; }
   if (t.dataset.ctab) { C.tab = t.dataset.ctab; renderCabinet(); return; }
@@ -371,7 +402,7 @@ document.addEventListener('click', function (e) {
   else if (a === 'rpub') { REVIEWS.filter(function (r) { return r.id == id; })[0].st = 'pub'; renderAdmin(); toast('Отзыв опубликован'); }
   else if (a === 'rhide') { REVIEWS.filter(function (r) { return r.id == id; })[0].st = 'hidden'; renderAdmin(); toast('Отзыв скрыт'); }
   else if (a === 'rdel') { if (confirm('Удалить отзыв?')) { REVIEWS = REVIEWS.filter(function (r) { return r.id != id; }); renderAdmin(); toast('Отзыв удалён'); } }
-  else if (a === 'logout') { toast('Вы вышли из аккаунта'); location.hash = '#/login'; }
+  else if (a === 'logout') { if (apiBase()) api('/api/auth/logout'); toast('Вы вышли из аккаунта'); location.hash = '#/login'; }
   else if (a === 'cmore') { C.open = C.open === id ? null : id; renderCabinet(); }
   else if (a === 'ccancel') { if (confirm('Отменить бронь ' + id + '? Бесплатная отмена возможна за 48 часов до получения.')) { CB.filter(function (b) { return b.id === id; })[0].st = 'cancelled'; renderCabinet(); toast('Бронь отменена'); } }
   else if (a === 'creview') reviewForm(id);
@@ -391,13 +422,45 @@ document.addEventListener('submit', function (e) {
     e.preventDefault();
     var ph = phoneValue('reg', f), v = { name: f.name.value.trim(), last: f.last.value.trim(), email: f.email.value.trim(), dob: f.dob.value };
     REG.name = v.name; REG.last = v.last; REG.email = v.email; REG.dob = v.dob; REG.co = $('[data-phone="reg"]', f).dataset.c; REG.ph = $('[data-phone="reg"] input', f).value;
-    var err = !v.name ? 'Укажите имя' : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email) ? 'Проверьте email: он нужен для подтверждения' : ph.digits.length < 6 ? 'Укажите номер телефона' : f.pw.value.length < 6 ? 'Пароль должен быть не короче 6 символов' : f.pw.value !== f.pw2.value ? 'Пароли не совпадают' : !f.agree.checked ? 'Подтвердите согласие с условиями' : '';
+    var err = !v.name ? 'Укажите имя' : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email) ? 'Проверьте email: он нужен для подтверждения' : ph.digits.length < 6 ? 'Укажите номер телефона' : f.pw.value.length < 8 ? 'Пароль должен быть не короче 8 символов' : f.pw.value !== f.pw2.value ? 'Пароли не совпадают' : !f.agree.checked ? 'Подтвердите согласие с условиями' : '';
     if (err) { $('#regErr').textContent = err; return; }
+    if (apiBase()) {
+      var sb = $('button[type=submit]', f); sb.disabled = true;
+      api('/api/auth/register', { name: v.name, last: v.last, email: v.email, phone: ph.full, dob: v.dob, password: f.pw.value, agree: true, lang: 'ru' })
+        .then(function (j) {
+          sb.disabled = false;
+          if (j.ok) { REG.state = 'sent'; renderRegister(); window.scrollTo(0, 0); return; }
+          var e = $('#regErr'); if (!e) return;
+          if (j.errors) e.textContent = j.errors[Object.keys(j.errors)[0]];
+          else if (j.error === 'mail_failed') e.textContent = 'Не удалось отправить письмо. Попробуйте позже или напишите нам.';
+          else if (j.error === 'too_many_requests' || j.status === 429) e.textContent = 'Слишком много попыток. Подождите немного и повторите.';
+          else e.textContent = 'Не удалось зарегистрироваться. Попробуйте позже.';
+        })
+        .catch(function () { sb.disabled = false; var e = $('#regErr'); if (e) e.textContent = 'Нет связи с сервером. Попробуйте позже.'; });
+      return;
+    }
     REG.state = 'sent'; renderRegister(); window.scrollTo(0, 0);
   } else if (f.id === 'loginForm') {
     e.preventDefault();
     var lg = f.login.value.trim().toLowerCase();
     if (!lg || !f.pw.value) { $('#loginErr').textContent = 'Введите email или телефон и пароль'; return; }
+    if (apiBase()) {
+      var lb = $('button[type=submit]', f); lb.disabled = true;
+      api('/api/auth/login', { login: f.login.value.trim(), password: f.pw.value }).then(function (j) {
+        lb.disabled = false;
+        var e = $('#loginErr');
+        if (j.ok) {
+          if (j.user) { CLIENT.name = j.user.name || CLIENT.name; CLIENT.last = j.user.last || ''; CLIENT.email = j.user.email || CLIENT.email; }
+          location.hash = j.role === 'admin' ? '#/admin' : '#/cabinet'; return;
+        }
+        if (!e) return;
+        if (j.error === 'not_verified') { LOGIN_UNVERIFIED = j.email || ''; e.innerHTML = 'Email не подтверждён. Откройте письмо и проверьте папку «Спам». <span class="lnk" id="resendLogin">Отправить письмо ещё раз</span>'; }
+        else if (j.error === 'invalid_credentials') e.textContent = 'Неверный логин или пароль';
+        else if (j.error === 'too_many_requests' || j.status === 429) e.textContent = 'Слишком много попыток. Подождите немного и повторите.';
+        else e.textContent = 'Не удалось войти. Попробуйте позже.';
+      }).catch(function () { lb.disabled = false; var e = $('#loginErr'); if (e) e.textContent = 'Нет связи с сервером. Попробуйте позже.'; });
+      return;
+    }
     location.hash = lg === 'admin' ? '#/admin' : '#/cabinet';
   } else if (f.id === 'profForm') { e.preventDefault(); toast('Профиль сохранён'); }
   else if (f.id === 'rentForm') {
@@ -427,7 +490,11 @@ function onRoute() {
     if (sub === 'sent') { REG.email = REG.email || 'name@example.com'; REG.name = REG.name || 'Лея'; REG.state = 'sent'; }
     else { REG.state = 'form'; clearInterval(cdTimer); }
     renderRegister();
-  } else if (page === 'login') renderLogin();
+  } else if (page === 'login') {
+    if (sub === 'confirmed') LOGIN_MSG = 'Email подтверждён. Теперь можно войти в личный кабинет.';
+    if (sub === 'expired') LOGIN_ERR = 'Ссылка устарела или уже использована. Войдите: если email не подтверждён, мы предложим отправить письмо ещё раз.';
+    renderLogin();
+  }
   else if (page === 'cabinet') { if (['bookings', 'favs', 'profile'].indexOf(sub) >= 0) C.tab = sub; renderCabinet(); }
   else if (page === 'admin') { if (ATABS.some(function (t) { return t[0] === sub; })) A.tab = sub; renderAdmin(); }
 }
