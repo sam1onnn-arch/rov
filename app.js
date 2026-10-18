@@ -226,40 +226,23 @@ var FAVS = ['g63', 'p911'];
 var CST = { confirmed: 'Подтверждено', active: 'Активно', completed: 'Завершено', cancelled: 'Отменено' };
 
 function renderCabinet() {
-  var v = $('#cabinetView'), tabs = [['bookings', 'Мои бронирования'], ['favs', 'Избранное'], ['profile', 'Профиль']];
-  var spent = CB.filter(function (b) { return b.st === 'completed' || b.st === 'confirmed'; }).reduce(function (s, b) { return s + calc(CARS[b.car], ndays(b.from, b.to)); }, 0);
-  var body = '';
-  if (C.tab === 'bookings') {
-    body = '<div class="stat"><div><small>Всего аренд</small><b>' + CB.length + '</b></div><div><small>Активные и предстоящие</small><b>' + CB.filter(function (b) { return b.st === 'confirmed' || b.st === 'active'; }).length + '</b></div><div><small>Всего потрачено</small><b>' + money(spent) + '</b></div></div>' +
-      (CB.length ? CB.map(function (b) {
-        var car = CARS[b.car], n = ndays(b.from, b.to), tot = calc(car, n), op = C.open === b.id;
-        var acts = '<button class="btn sm" type="button" data-act="cmore" data-id="' + b.id + '">' + (op ? 'Скрыть' : 'Подробнее') + '</button>';
-        if (b.st === 'confirmed') acts += '<button class="btn sm" type="button" data-act="ccancel" data-id="' + b.id + '">Отменить бронь</button>';
-        if (b.st === 'completed') acts += b.reviewed ? '<span class="hint">Отзыв оставлен</span>' : '<button class="btn sm" type="button" data-act="creview" data-id="' + b.id + '">Оставить отзыв</button>';
-        return '<div class="bk2"><div class="top"><div class="ph"><img src="' + car.img + '" alt=""></div><div><span class="st' + (b.st === 'confirmed' || b.st === 'active' ? ' ok' : '') + '">' + CST[b.st] + '</span><h4>' + car.name + '</h4>' +
-          '<div class="meta"><span>Даты<b>' + fmt(b.from, b.to) + '</b></span><span>Срок<b>' + n + ' сут.</b></span><span>Пакет км<b>150 км в сутки</b></span><span>Итого<b>' + money(tot) + '</b></span></div></div><div class="act">' + acts + '</div></div>' +
-          (op ? '<div class="more"><div><small>Номер брони</small>' + b.id + '</div><div><small>Место получения</small>' + b.place + '</div><div><small>Залог</small>' + money(car.dep) + ' (возвращается при возврате)</div><div><small>Аренда</small>' + money(tot) + '</div><div><small>Итого при получении</small>' + money(tot + car.dep) + '</div><div><small>Связь с менеджером</small>WhatsApp или Telegram</div></div>' : '') + '</div>';
-      }).join('') : '<p class="hint">Пока нет бронирований.</p>');
-  } else if (C.tab === 'favs') {
-    body = FAVS.length ? '<div class="fav2">' + FAVS.map(function (id) {
-      var c = CARS[id];
-      return '<div class="fc"><img src="' + c.img + '" alt=""><div class="fb2"><h4>' + c.name + '</h4><p>' + money(c.price) + ' в сутки · залог ' + money(c.dep) + '</p><div class="row-act"><a class="btn sm solid" href="#catalog">В каталог</a><button class="btn sm" type="button" data-act="unfav" data-id="' + id + '">Убрать</button></div></div></div>';
-    }).join('') + '</div>' : '<p class="hint">Здесь пока пусто. Нажмите сердечко на карточке автомобиля в каталоге.</p>';
-  } else {
-    body = '<form class="fields" id="profForm" style="max-width:720px" novalidate><label>Имя<input value="' + esc(CLIENT.name) + '"></label><label>Фамилия<input value="' + esc(CLIENT.last) + '"></label>' +
-      '<label class="wide">Email<input type="email" value="' + esc(CLIENT.email) + '"></label><label class="wide">Телефон' + phoneField('prof', CLIENT.co, CLIENT.ph) + '</label>' +
-      '<label>Дата рождения<input type="date" value="' + CLIENT.dob + '"></label><label>Язык интерфейса<select><option>Русский</option><option>English</option><option disabled>ქართული (скоро)</option><option disabled>עברית (скоро)</option></select></label>' +
-      '<div class="wide row-act" style="gap:12px"><button class="btn solid" type="submit">Сохранить</button><button class="btn" type="button" data-act="pw">Сменить пароль</button></div></form>';
-  }
-  v.innerHTML = '<div class="wrap pg">' + BACK + '<div class="cab-top"><div><h1>Мои бронирования</h1><p class="sub">Здравствуйте, ' + esc(CLIENT.name) + '! История ваших аренд.</p></div><button class="btn sm" type="button" data-act="logout">Выйти</button></div>' +
-    '<div class="tabs2">' + tabs.map(function (t) { return '<button type="button" data-ctab="' + t[0] + '" aria-pressed="' + (C.tab === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div>' + body + '</div>';
+  var v = $('#cabinetView'), list = CB.length ? CB.map(function (b) {
+    var car = CARS[b.car], n = ndays(b.from, b.to), tot = calc(car, n), op = C.open === b.id;
+    var acts = '<button class="btn sm" type="button" data-act="cmore" data-id="' + b.id + '">' + (op ? 'Скрыть' : 'Подробнее') + '</button>';
+    if (b.st === 'confirmed') acts += '<button class="btn sm" type="button" data-act="ccancel" data-id="' + b.id + '">Отменить бронь</button>';
+    return '<div class="bk2"><div class="top"><div class="ph"><img src="' + car.img + '" alt=""></div><div><span class="st' + (b.st === 'confirmed' || b.st === 'active' ? ' ok' : '') + '">' + CST[b.st] + '</span><h4>' + car.name + '</h4>' +
+      '<div class="meta"><span>Даты<b>' + fmt(b.from, b.to) + '</b></span><span>Срок<b>' + n + ' сут.</b></span><span>Залог<b>' + money(car.dep) + '</b></span><span>Итого<b>' + money(tot) + '</b></span></div></div><div class="act">' + acts + '</div></div>' +
+      (op ? '<div class="more"><div><small>Номер брони</small>' + b.id + '</div><div><small>Место получения</small>' + b.place + '</div><div><small>Пакет км</small>150 км в сутки</div><div><small>Итого при получении</small>' + money(tot + car.dep) + '</div><div><small>Связь с менеджером</small>WhatsApp или Telegram</div></div>' : '') + '</div>';
+  }).join('') : '<div class="empty-cab"><p class="hint">У вас пока нет бронирований.</p><a class="btn solid" href="#catalog">Выбрать автомобиль</a></div>';
+  var prof = '<h3 class="ch-t">Ваши данные</h3><div class="dlist" style="max-width:720px"><div><small>Имя</small>' + esc(CLIENT.name + ' ' + CLIENT.last) + '</div><div><small>Email</small>' + esc(CLIENT.email) + '</div><div><small>Телефон</small><span class="fc2">' + flag(CLIENT.co) + cdata(CLIENT.co).d + ' ' + esc(CLIENT.ph) + '</span></div></div><div class="row-act" style="margin-top:14px"><button class="btn sm" type="button" data-act="pw">Изменить пароль</button></div>';
+  v.innerHTML = '<div class="wrap pg">' + BACK + '<div class="cab-top"><div><h1>Мои бронирования</h1><p class="sub">Здравствуйте, ' + esc(CLIENT.name) + '!</p></div><div class="row-act"><a class="btn sm solid" href="#catalog">Забронировать</a><button class="btn sm" type="button" data-act="logout">Выйти</button></div></div>' + list + prof + '</div>';
 }
 
 /* ============================================================
    АДМИНИСТРИРОВАНИЕ
    ============================================================ */
 var A = { tab: 'bookings', q: '' };
-var ATABS = [['bookings', 'Бронирования'], ['calendar', 'Календарь'], ['cars', 'Автомобили'], ['clients', 'Клиенты'], ['reviews', 'Отзывы'], ['stats', 'Статистика']];
+var ATABS = [['bookings', 'Бронирования'], ['calendar', 'Календарь'], ['cars', 'Автомобили']];
 function octOverlap(b) { var a = Math.max(dt(b.from), dt('2026-10-01')), z = Math.min(dt(b.to), dt('2026-11-01')); return Math.max(0, Math.round((z - a) / 864e5)); }
 function kpis() {
   var rev = BK.filter(function (b) { return b.st === 'issued' || b.st === 'returned'; }).reduce(function (s, b) { return s + bkTotal(b); }, 0);
@@ -303,35 +286,8 @@ function renderAdmin() {
         var c = CARS[id], busy = BK.some(function (b) { return b.car === id && b.st === 'issued'; });
         return '<tr><td><div class="nmc">' + (c.img ? '<img class="th" src="' + c.img + '" alt="">' : '<i class="th"></i>') + '<span>' + c.name + '</span></div></td><td>' + c.cat + '</td><td>' + money(c.price) + '</td><td>' + money(c.long) + '</td><td>' + money(c.dep) + '</td><td>' + (c.hidden ? '<span class="tag2 dim">Скрыт</span>' : busy ? '<span class="tag2 on">Арендован</span>' : '<span class="tag2">Доступен</span>') + '</td><td><div class="row-act"><span class="lbtn" data-act="editcar" data-id="' + id + '">Изменить</span><span class="lbtn" data-act="hidecar" data-id="' + id + '">' + (c.hidden ? 'Показать' : 'Скрыть') + '</span></div></td></tr>';
       }).join('') + '</tbody></table></div>';
-  } else if (A.tab === 'clients') {
-    var map = {};
-    BK.forEach(function (b) { var k = b.cl; if (!map[k]) map[k] = { cl: b.cl, co: b.co, phone: b.phone, email: b.email, n: 0, sum: 0 }; map[k].n++; if (b.st !== 'cancelled') map[k].sum += bkTotal(b); });
-    var q = A.q.toLowerCase(), rows = Object.keys(map).map(function (k) { return map[k]; }).filter(function (c) { return !q || (c.cl + c.phone + c.email).toLowerCase().indexOf(q) >= 0; });
-    body = '<div class="bar-top"><input class="sinp" id="cq" placeholder="Поиск клиента" value="' + esc(A.q) + '"><span class="hint">Клиентов: ' + rows.length + '</span></div><div class="tw"><table class="tbl"><thead><tr><th>Клиент</th><th>Страна</th><th>Телефон</th><th>Email</th><th>Бронирований</th><th>Всего потрачено</th></tr></thead><tbody>' +
-      (rows.length ? rows.map(function (c) { return '<tr><td>' + esc(c.cl) + '</td><td><span class="fc2">' + flagS(c.co) + cdata(c.co).n + '</span></td><td>' + esc(c.phone) + '</td><td>' + esc(c.email) + '</td><td>' + c.n + '</td><td>' + money(c.sum) + '</td></tr>'; }).join('') : '<tr><td colspan="6" class="hint">Клиент не найден.</td></tr>') + '</tbody></table></div>';
-  } else if (A.tab === 'reviews') {
-    var pend = REVIEWS.filter(function (r) { return r.st === 'pending'; }).length;
-    body = '<div class="bar-top"><span class="hint">Всего отзывов: ' + REVIEWS.length + ', на проверке: ' + pend + '</span></div>' + (REVIEWS.length ? REVIEWS.map(function (r) {
-      return '<div class="rev"><div class="rh"><span><b style="font-weight:400">' + esc(r.cl) + '</b> · ' + CARS[r.car].short + ' · ' + fmtOne(r.date) + '</span><span class="stars">' + new Array(r.stars + 1).join('★') + new Array(6 - r.stars).join('☆') + '</span></div><p>' + esc(r.text) + '</p>' +
-        '<div class="row-act"><span class="tag2' + (r.st === 'pub' ? ' on' : '') + '">' + (r.st === 'pub' ? 'Опубликован' : r.st === 'hidden' ? 'Скрыт' : 'На проверке') + '</span>' +
-        (r.st !== 'pub' ? '<span class="lbtn" data-act="rpub" data-id="' + r.id + '">Опубликовать</span>' : '<span class="lbtn" data-act="rhide" data-id="' + r.id + '">Скрыть</span>') + '<span class="lbtn red" data-act="rdel" data-id="' + r.id + '">Удалить</span></div></div>';
-    }).join('') : '<p class="hint">Пока нет отзывов.</p>');
-  } else {
-    var k = kpis(), perDay = new Array(31).fill(0);
-    BK.filter(function (b) { return b.st === 'issued' || b.st === 'returned'; }).forEach(function (b) {
-      var c = CARS[b.car], n = bkDays(b), rate = n >= 3 ? c.long : c.price, s = dt(b.from);
-      for (var i = 0; i < n; i++) { var dd = new Date(s.getTime() + i * 864e5); if (dd.getMonth() === 9) perDay[dd.getDate() - 1] += rate; }
-    });
-    var mx = Math.max.apply(null, perDay.concat([1]));
-    var byCar = Object.keys(CARS).map(function (id) { var l = BK.filter(function (b) { return b.car === id && b.st !== 'cancelled'; }); return { n: CARS[id].short, c: l.length, s: l.reduce(function (s, b) { return s + bkTotal(b); }, 0) }; });
-    var maxC = Math.max.apply(null, byCar.map(function (x) { return x.s; }).concat([1]));
-    var src = [['Telegram', 45], ['WhatsApp', 30], ['Сайт', 15], ['Звонок', 10]];
-    body = kpiHtml().replace('сейчас у клиентов', 'сейчас у клиентов') + '<div class="kpis" style="margin-top:-14px"><div><small>Средний чек</small><b>' + money(k.avg) + '</b><i>без отменённых</i></div><div><small>Отменено</small><b>' + BK.filter(function (b) { return b.st === 'cancelled'; }).length + '</b><i>за месяц</i></div><div><small>Новых заявок</small><b>' + BK.filter(function (b) { return b.st === 'new'; }).length + '</b><i>ждут ответа</i></div><div><small>Средний срок</small><b>' + (BK.reduce(function (s, b) { return s + bkDays(b); }, 0) / BK.length).toFixed(1).replace('.', ',') + ' сут.</b><i>по всем броням</i></div></div>' +
-      '<h3 class="ch-t">Ежедневный доход, октябрь 2026</h3><div class="chart">' + perDay.map(function (x, i) { return '<i title="' + (i + 1) + ' окт: ' + money(x) + '" style="height:' + Math.max(2, Math.round(x / mx * 100)) + '%"' + (i + 1 === 18 ? ' class="on"' : '') + '></i>'; }).join('') + '</div>' +
-      '<div class="two"><div><h3 class="ch-t">Популярные автомобили</h3>' + byCar.map(function (x) { return '<div class="hb"><div class="l"><b style="font-weight:300">' + x.n + '</b><span>' + x.c + ' аренд · ' + money(x.s) + '</span></div><div class="t"><i style="width:' + Math.round(x.s / maxC * 100) + '%"></i></div></div>'; }).join('') + '</div>' +
-      '<div><h3 class="ch-t">Источники заявок (пример)</h3>' + src.map(function (x) { return '<div class="hb"><div class="l"><b style="font-weight:300">' + x[0] + '</b><span>' + x[1] + ' %</span></div><div class="t"><i style="width:' + x[1] + '%"></i></div></div>'; }).join('') + '</div></div>';
   }
-  v.innerHTML = '<div class="wrap pg"><div class="cab-top"><div><h1>Администрирование</h1><p class="sub">Управляйте автомобилями, бронированиями и клиентами.</p></div><div class="row-act"><a class="btn sm" href="#top">Вернуться на сайт</a><button class="btn sm" type="button" data-act="logout">Выйти</button></div></div>' +
+  v.innerHTML = '<div class="wrap pg"><div class="cab-top"><div><h1>Администрирование</h1><p class="sub">Заявки, календарь занятости и автомобили.</p></div><div class="row-act"><a class="btn sm" href="#top">Вернуться на сайт</a><button class="btn sm" type="button" data-act="logout">Выйти</button></div></div>' +
     '<div class="tabs2">' + ATABS.map(function (t) { return '<button type="button" data-atab="' + t[0] + '" aria-pressed="' + (A.tab === t[0]) + '">' + t[1] + '</button>'; }).join('') + '</div>' + body + '</div>';
 }
 function flagS(c) { return flag(c); }
